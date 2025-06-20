@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AP Intermediate Academic Plan Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Calm Neutrals -->
+    <!-- Application Structure Plan: The SPA is designed as a "Course-Centric Dashboard". This structure prioritizes the primary user task: finding a specific academic plan quickly. The top-level navigation divides courses into "General" and "Vocational" streams. Selecting a course (e.g., "MPC") dynamically updates the main content area with all relevant information for that stream. Within each course view, users can toggle between 1st and 2nd Year plans using tabs. Content is further organized into collapsible accordion sections (Syllabus, Monthly Plan, etc.) to prevent information overload. This architecture was chosen over a linear document because it provides a direct, filtered path to the desired information, making the dense report highly usable for its target audience (faculty, administrators) who are typically focused on a single course. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: BIEAP Calendar (Table 1) -> Goal: Inform/Change -> Viz/Method: Interactive Timeline (Structured HTML/CSS) -> Interaction: N/A, visual grouping by color -> Justification: More engaging and easier to scan for key dates than a dense table.
+        - Report Info: Grading System (Table 3) -> Goal: Inform/Compare -> Viz/Method: Bar Chart (Chart.js) -> Interaction: Hover tooltips -> Justification: Visually represents the relationship between mark percentages and grades more effectively than a table.
+        - Report Info: Syllabus Details -> Goal: Organize/Inform -> Viz/Method: Collapsible Accordions (HTML/JS) -> Interaction: Click to expand/collapse -> Justification: Manages large blocks of text, allowing users to focus on one subject at a time without overwhelming scrolling.
+        - Report Info: OJT Evaluation (Table 4) -> Goal: Inform -> Viz/Method: Styled Scorecard (HTML/Tailwind) -> Interaction: N/A -> Justification: A visually clear, reusable component for vocational courses that breaks down the evaluation criteria.
+        - Report Info: Monthly Plans -> Goal: Organize/Change -> Viz/Method: Responsive Tables (HTML/Tailwind) -> Interaction: N/A -> Justification: The clearest way to present a structured, time-based plan.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            background-color: #f8f7f4;
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .nav-button {
+            transition: all 0.3s ease;
+        }
+        .nav-button.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        }
+        .year-tab.active {
+            background-color: #1e40af;
+            color: white;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 40vh;
+            width: 100%;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <!-- Disclaimer Banner -->
+        <div class="mb-6">
+            <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900 p-4 rounded-lg text-center font-semibold shadow">
+                Disclaimer: For use by <span class="underline">Pavitra Educational Institutions</span> only.
+            </div>
+        </div>
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Academic & Examination Master Plan</h1>
+            <p class="text-lg text-gray-600 mt-2">Interactive Dashboard for AP Intermediate College (2025-2026)</p>
+        </header>
+
+        <nav id="course-navigation" class="mb-8">
+            <div class="mb-6">
+                <h2 class="text-xl font-semibold mb-3 text-center text-gray-700">Select a Stream to Begin</h2>
+                <div class="flex flex-wrap justify-center gap-3">
+                     <button data-target="overview" class="nav-button active bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-300 rounded-lg shadow-sm">
+                        &#x1F4CB; BIEAP Framework
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <h3 class="font-bold text-lg mb-4 text-center text-blue-800">General Streams</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <button data-target="mpc" class="nav-button bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold py-2 px-4 border border-blue-200 rounded-lg">MPC</button>
+                        <button data-target="bipc" class="nav-button bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold py-2 px-4 border border-blue-200 rounded-lg">BiPC</button>
+                        <button data-target="mec" class="nav-button bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold py-2 px-4 border border-blue-200 rounded-lg">MEC</button>
+                        <button data-target="cec" class="nav-button bg-blue-50 hover:bg-blue-100 text-blue-800 font-semibold py-2 px-4 border border-blue-200 rounded-lg">CEC</button>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <h3 class="font-bold text-lg mb-4 text-center text-green-800">Vocational Streams</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <button data-target="mlt" class="nav-button bg-green-50 hover:bg-green-100 text-green-800 font-semibold py-2 px-4 border border-green-200 rounded-lg">MLT</button>
+                        <button data-target="mphw" class="nav-button bg-green-50 hover:bg-green-100 text-green-800 font-semibold py-2 px-4 border border-green-200 rounded-lg">MPhW</button>
+                        <button data-target="at" class="nav-button bg-green-50 hover:bg-green-100 text-green-800 font-semibold py-2 px-4 border border-green-200 rounded-lg">A&T</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main id="main-content">
+            <!-- Overview / BIEAP Framework Section -->
+            <div id="overview" class="content-section active space-y-8">
+                <section class="bg-white p-6 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold mb-4 text-blue-900">BIEAP 2025-26 Academic Calendar</h2>
+                    <p class="mb-6 text-gray-600">This section provides the master timeline for all institutional planning, including instruction, holidays, and examination periods as mandated by the Board of Intermediate Education, Andhra Pradesh (BIEAP).</p>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 bg-green-50 border-l-4 border-green-500 rounded-r-lg">
+                                <h4 class="font-bold">June 2, 2025</h4>
+                                <p>College Reopening</p>
+                            </div>
+                             <div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
+                                <h4 class="font-bold">Sep 28 - Oct 5, 2025</h4>
+                                <p>Dasara Holidays (8 days)</p>
+                            </div>
+                            <div class="p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded-r-lg">
+                                <h4 class="font-bold">Jan 10 - 18, 2026</h4>
+                                <p>Sankranti Holidays (9 days)</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                                <h4 class="font-bold">Feb 1 & 3, 2026</h4>
+                                <p>Ethics & Environment Exams</p>
+                            </div>
+                            <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                                <h4 class="font-bold">Feb 5 - 20, 2026</h4>
+                                <p>Practical Examinations</p>
+                            </div>
+                            <div class="p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+                                <h4 class="font-bold">March 2026</h4>
+                                <p>IPE Theory Examinations</p>
+                            </div>
+                             <div class="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-r-lg">
+                                <h4 class="font-bold">Nov - Dec 2025</h4>
+                                <p>Vocational On-the-Job Training</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="bg-white p-6 rounded-xl shadow-lg">
+                     <h2 class="text-2xl font-bold mb-4 text-blue-900">Core Examination Reforms</h2>
+                     <p class="mb-6 text-gray-600">The 2025-26 academic year introduces significant reforms. These changes align the curriculum with national standards (NCERT), modify the examination structure, and introduce continuous evaluation to foster deeper conceptual understanding.</p>
+                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                         <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x1F4DA; NCERT Syllabus Transition</h4>
+                             <p>1st Year Science streams fully adopt the NCERT curriculum. Syllabus for other streams and 2nd Year Science is also revised.</p>
+                         </div>
+                         <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x1F522; New 5-Subject Structure</h4>
+                             <p>Science streams move to a 5-subject system (1 Language, 1 Elective, 3 Core Subjects), totaling 500 marks per year.</p>
+                         </div>
+                         <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x1F4DD; Consolidated Papers</h4>
+                             <p>Maths (A+B) and Biology (Botany+Zoology) are now single 100-mark papers, changing the exam approach.</p>
+                         </div>
+                         <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x2753; New Question Pattern</h4>
+                             <p>Focus shifts to objective and analytical questions (VSAQ, SAQ, LAQ) over rote memorization, mirroring competitive exams.</p>
+                         </div>
+                         <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x1F4C5; Internal Assessment (20%)</h4>
+                             <p>Mandatory continuous evaluation through tests, assignments, and projects contributes 20% to the final marks in most subjects.</p>
+                         </div>
+                          <div class="p-4 bg-gray-50 rounded-lg border">
+                             <h4 class="font-bold text-lg mb-2">&#x1F52C; Revised Marks</h4>
+                             <p>Theory marks for Physics & Chemistry increased from 60 to 70, keeping practicals at 30 marks.</p>
+                         </div>
+                     </div>
+                </section>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <section class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-2xl font-bold mb-4 text-blue-900">Grading & Division System</h2>
+                        <p class="mb-4 text-gray-600">Final results are determined by a grade point system. Students must secure at least 35% in each subject and in aggregate to pass. This chart visualizes the mark range for each grade.</p>
+                        <div class="chart-container">
+                            <canvas id="gradingChart"></canvas>
+                        </div>
+                    </section>
+                    <section class="bg-white p-6 rounded-xl shadow-lg">
+                        <h2 class="text-2xl font-bold mb-4 text-blue-900">Vocational OJT Evaluation</h2>
+                        <p class="mb-4 text-gray-600">On-the-Job Training (OJT) is a mandatory 100-mark component for all vocational courses. Performance is assessed based on the following criteria by industry supervisors and college faculty.</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-md"><span>Attendance and Punctuality</span><span class="font-bold text-blue-600">30 Marks</span></div>
+                            <div class="flex justify-between items-center p-3 bg-gray-100 rounded-md"><span>Application of Knowledge & Problem-Solving</span><span class="font-bold text-blue-600">20 Marks</span></div>
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-md"><span>Comprehension, Communication & Dairy Maintenance</span><span class="font-bold text-blue-600">30 Marks</span></div>
+                            <div class="flex justify-between items-center p-3 bg-gray-100 rounded-md"><span>Technical Familiarity, Manual & Human Skills</span><span class="font-bold text-blue-600">20 Marks</span></div>
+                            <div class="flex justify-between items-center p-3 bg-blue-100 border-t-2 border-blue-500 rounded-b-md mt-2">
+                                <span class="font-bold">Total</span>
+                                <span class="font-bold text-blue-800">100 Marks (Pass: 50)</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- MPC Content -->
+            <div id="mpc" class="content-section">
+                <!-- Content will be populated by JS template -->
+            </div>
+            <!-- BiPC Content -->
+            <div id="bipc" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+             <!-- MEC Content -->
+            <div id="mec" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+             <!-- CEC Content -->
+            <div id="cec" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+             <!-- MLT Content -->
+            <div id="mlt" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+             <!-- MPhW Content -->
+            <div id="mphw" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+             <!-- A&T Content -->
+            <div id="at" class="content-section">
+                 <!-- Content will be populated by JS template -->
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="text-center text-gray-500 text-sm py-6">
+        &copy; 2025 prudhviraj Tirumanisetti. All rights reserved. <span class="block mt-1">Author: prudhviraj tirumanisetti</span>
+    </footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const courseData = {
+        mpc: {
+            title: 'MPC (Mathematics, Physics, Chemistry)',
+            intro: 'The MPC stream prepares students for engineering and physical science pathways, incorporating the new NCERT-aligned syllabus and a consolidated Mathematics paper.',
+            years: {
+                '1st': {
+                    structure: ['English', 'Second Language', 'Mathematics (Paper I)', 'Physics (Paper I)', 'Chemistry (Paper I)'],
+                    syllabus: {
+                        'Mathematics': 'Sets, Relations, Functions, Trigonometry, Complex Numbers, Linear Inequalities, Permutations & Combinations, Binomial Theorem, Sequences, Series, Straight Lines, Conic Sections, 3D Geometry, Limits, Derivatives, Statistics, Probability.',
+                        'Physics': 'Units & Measurements, Motion, Laws of Motion, Work, Energy, Power, Rotational Motion, Gravitation, Properties of Matter, Thermodynamics, Kinetic Theory, Oscillations & Waves.',
+                        'Chemistry': 'Basic Concepts, Atomic Structure, Periodicity, Chemical Bonding, Thermodynamics, Equilibrium, Redox Reactions, Basic Organic Chemistry, Hydrocarbons.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Maths: Sets, Functions. Physics: Units, Motion. Chem: Basic Concepts, Atomic Structure.' },
+                        { month: 'Aug-Sep', focus: 'Maths: Complex Nos, Permutations. Physics: Laws of Motion. Chem: Periodicity, Bonding. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Maths: Binomial Theorem, Straight Lines. Physics: Rotational Motion. Chem: Thermodynamics.' },
+                        { month: 'Dec-Jan', focus: 'Maths: Conic Sections, 3D Geometry. Physics: Properties of Matter. Chem: Equilibrium, Organic. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Feb-Mar', focus: 'Practical Exams & IPE Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['English', 'Second Language', 'Mathematics (Paper II)', 'Physics (Paper II)', 'Chemistry (Paper II)'],
+                    syllabus: {
+                        'Mathematics': 'Complex Numbers, De Moivre\'s, Quadratic Eq, Theory of Eq, P&C, Binomial Theorem, Partial Fractions, Probability, Circle, Parabola, Ellipse, Hyperbola, Integration, Differential Equations.',
+                        'Physics': 'Waves, Ray & Wave Optics, Electromagnetism, Electric Charges, Potential, Current, Magnetism, EMI, AC, Modern Physics, Semiconductors.',
+                        'Chemistry': 'Solid State, Solutions, Kinetics, Surface Chemistry, Metallurgy, p/d/f-Block Elements, Coordination Compounds, Polymers, Biomolecules, Organic Compounds.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Maths: Complex Nos, Circles. Physics: Waves, Ray Optics. Chem: Solid State, Solutions.' },
+                        { month: 'Aug-Sep', focus: 'Maths: Quadratic Eq, System of Circles. Physics: Wave Optics, Electric Charges. Chem: Kinetics. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Maths: Parabola, Ellipse. Physics: Electrostatics, Current Electricity. Chem: Metallurgy, p-Block.' },
+                        { month: 'Dec-Jan', focus: 'Maths: Hyperbola, Integration. Physics: Magnetism, EMI. Chem: d/f-Block, Polymers. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Feb-Mar', focus: 'Practical Exams & IPE Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        bipc: {
+            title: 'BiPC (Biology, Physics, Chemistry)',
+            intro: 'The BiPC stream is the foundation for careers in medicine and life sciences, featuring a new consolidated Biology paper and NCERT-aligned curriculum.',
+            years: {
+                '1st': {
+                    structure: ['English', 'Second Language', 'Biology (Paper I)', 'Physics (Paper I)', 'Chemistry (Paper I)'],
+                    syllabus: {
+                        'Biology': '<b>Botany:</b> Living World, Plant Kingdom, Morphology, Anatomy, Cell, Biomolecules, Cell Division, Photosynthesis, Respiration. <b>Zoology:</b> Living World, Animal Kingdom, Structural Organisation, Digestion, Respiration.',
+                        'Physics': 'Same as 1st Year MPC.',
+                        'Chemistry': 'Same as 1st Year MPC.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Biology: Diversity (Botany & Zoology). Physics/Chem: Foundational units.' },
+                        { month: 'Aug-Sep', focus: 'Biology: Structural Organisation. Physics/Chem: Mechanics, Bonding. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Biology: Cell Structure & Division. Physics/Chem: Gravitation, Thermodynamics.' },
+                        { month: 'Dec-Jan', focus: 'Biology: Plant & Human Physiology. Physics/Chem: Matter, Equilibrium. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Feb-Mar', focus: 'Practical Exams & IPE Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                     structure: ['English', 'Second Language', 'Biology (Paper II)', 'Physics (Paper II)', 'Chemistry (Paper II)'],
+                     syllabus: {
+                        'Biology': '<b>Botany:</b> Plant Physiology, Microbiology, Genetics, Molecular Biology, Biotechnology, Applied Botany. <b>Zoology:</b> Human Physiology, Reproduction, Genetics, Evolution, Applied Biology.',
+                        'Physics': 'Same as 2nd Year MPC.',
+                        'Chemistry': 'Same as 2nd Year MPC.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Biology: Plant & Human Physiology. Physics/Chem: Optics, Solutions.' },
+                        { month: 'Aug-Sep', focus: 'Biology: Microbiology, Genetics. Physics/Chem: Electrics, Kinetics. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Biology: Molecular Biology, Biotech. Physics/Chem: Electrostatics, Block elements.' },
+                        { month: 'Dec-Jan', focus: 'Biology: Applied Botany/Zoology, Reproduction. Physics/Chem: Magnetism, Organics. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Feb-Mar', focus: 'Practical Exams & IPE Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        mec: {
+            title: 'MEC (Mathematics, Economics, Commerce)',
+            intro: 'The MEC stream blends quantitative analysis with business studies, preparing students for careers in finance, economics, and professional courses like CA.',
+             years: {
+                '1st': {
+                    structure: ['English', 'Second Language', 'Mathematics (Paper I)', 'Economics (Paper I)', 'Commerce (Paper I)'],
+                    syllabus: {
+                        'Mathematics': 'Same as 1st Year MPC.',
+                        'Economics': 'Intro to Economics, Consumer Behaviour, Demand, Production, Market Analysis, Distribution, National Income, Public Finance, Money & Banking, Basic Statistics.',
+                        'Commerce': '<b>Theory:</b> Business Fundamentals, Forms of Org, Business Finance. <b>Accounting:</b> Intro, Journal, Ledger, Subsidiary Books, BRS, Final Accounts.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Maths: Sets, Functions. Eco: Intro, Consumer Behaviour. Comm: Fundamentals, Intro to Acct.' },
+                        { month: 'Aug-Sep', focus: 'Maths: P&C. Eco: Demand, Production. Comm: Partnership, Journal/Ledger. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Maths: Binomial Theorem. Eco: Market Analysis. Comm: Subsidiary Books.' },
+                        { month: 'Dec-Jan', focus: 'Maths: Conics. Eco: National Income. Comm: BRS, Final Accounts. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Mar', focus: 'IPE Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['English', 'Second Language', 'Mathematics (Paper II)', 'Economics (Paper II)', 'Commerce (Paper II)'],
+                    syllabus: {
+                        'Mathematics': 'Same as 2nd Year MPC.',
+                        'Economics': 'Indian Economy: Growth & Development, Demography, National Income, Poverty, Planning, Agri/Industrial/Tertiary Sectors, Foreign Sector, Environment, AP Economy.',
+                        'Commerce': '<b>Theory:</b> Financial Markets, Business Services, Entrepreneurship, Trade, Management. <b>Accounting:</b> Depreciation, Consignment, NPO, Partnership, Company Accts, Computerised Acct.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Maths: Complex Nos. Eco: Eco. Growth. Comm: Financial Mkts, Depreciation.' },
+                        { month: 'Aug-Sep', focus: 'Maths: Quadratic Eq. Eco: National Income. Comm: Business Services, Consignment. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Maths: Parabola. Eco: Agri/Industrial Sector. Comm: Entrepreneurship, NPO Accts.' },
+                        { month: 'Dec-Jan', focus: 'Maths: Hyperbola. Eco: Tertiary/Foreign Sector. Comm: Partnership Accts. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Mar', focus: 'IPE Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        cec: {
+            title: 'CEC (Civics, Economics, Commerce)',
+            intro: 'The CEC stream is the primary pathway for students interested in public administration, law, and business management.',
+             years: {
+                '1st': {
+                    structure: ['English', 'Second Language', 'Civics (Paper I)', 'Economics (Paper I)', 'Commerce (Paper I)'],
+                    syllabus: {
+                        'Civics': 'Intro to Pol. Science, State, Nationality, Law, Liberty, Equality, Justice, Rights, Democracy, Constitution, Forms of Government.',
+                        'Economics': 'Same as 1st Year MEC.',
+                        'Commerce': 'Same as 1st Year MEC.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Civics: Intro, State. Eco/Comm: Foundational Units.' },
+                        { month: 'Aug-Sep', focus: 'Civics: Law, Liberty. Eco/Comm: Demand, Production, Partnership. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Civics: Justice, Democracy. Eco/Comm: Market Analysis, Subsidiary Books.' },
+                        { month: 'Dec-Jan', focus: 'Civics: Constitution, Forms of Govt. Eco/Comm: National Income, Final Accts. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Mar', focus: 'IPE Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['English', 'Second Language', 'Civics (Paper II)', 'Economics (Paper II)', 'Commerce (Paper II)'],
+                    syllabus: {
+                        'Civics': 'Indian Constitution, Fundamental Rights, Union/State Executive, Legislature, Judiciary, Union-State Relations, Local Governments, Elections, Political Parties.',
+                        'Economics': 'Same as 2nd Year MEC.',
+                        'Commerce': 'Same as 2nd Year MEC.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Jul', focus: 'Civics: Constitution, Rights. Eco/Comm: Growth, Depreciation.' },
+                        { month: 'Aug-Sep', focus: 'Civics: Union Exec/Leg. Eco/Comm: National Income, Consignment. <b>(Internal Test I)</b>' },
+                        { month: 'Oct-Nov', focus: 'Civics: Judiciary, State Exec. Eco/Comm: Agri/Industry, NPO Accts.' },
+                        { month: 'Dec-Jan', focus: 'Civics: State Leg/Jud, Relations. Eco/Comm: Tertiary, Partnership. <b>(Internal Test II)</b>' },
+                        { month: 'Jan-Feb', focus: 'Syllabus completion, Revision & Pre-Finals.' },
+                        { month: 'Mar', focus: 'IPE Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        mlt: {
+            title: 'MLT (Medical Lab Technician)',
+            intro: 'This vocational course trains skilled technicians for diagnostic labs, combining theory with extensive hands-on practical training and On-the-Job Training (OJT).',
+             years: {
+                '1st': {
+                    structure: ['Gen. Foundation Course', 'English', 'Bio-Chemistry I', 'Microbiology & Pathology', 'Anatomy & Physiology', 'OJT'],
+                    syllabus: {
+                        'Bio-Chemistry I': 'Lab Safety, Glassware, Instruments, Specimen Collection, Solutions, Biomolecules, Diagnostic Tests.',
+                        'Microbiology & Pathology': 'Microscopy, Sterilization, Staining, Culture Media, Urine/Semen Analysis, Basic Hematology.',
+                        'Anatomy & Physiology': 'Human Body, Cell, Tissues, Organ Systems (Respiratory, Digestive, CV, etc.), Blood.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Foundational concepts in all subjects. Practical: Basic lab skills, microscopy, staining. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: Specimen collection, advanced systems. Practical: Blood collection. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory On-the-Job Training (OJT)</b> in affiliated labs/hospitals.' },
+                        { month: 'Jan', focus: 'Theory: Biomolecules, Hematology. Practical: Blood counts. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', focus: 'IPE Practical & Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['Gen. Foundation Course', 'English', 'Bio-Chemistry II', 'Microbiology', 'Pathology', 'OJT'],
+                    syllabus: {
+                        'Bio-Chemistry II': 'Metabolism, Advanced Instruments, LFT, KFT, TFT.',
+                        'Microbiology': 'Immunology (ELISA), Bacteriology, Mycology, Virology (HIV, Dengue).',
+                        'Pathology': 'Advanced Hematology, Clinical Pathology (CSF analysis), Histopathology.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Metabolism, Immunology, Hematology. Practical: Electrophoresis, Parasite exams. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: Nutrition, Mycology, Clinical Path. Practical: Fungal culture, CSF count. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory On-the-Job Training (OJT)</b> in affiliated labs/hospitals.' },
+                        { month: 'Jan', focus: 'Theory: LFT/KFT, Virology. Practical: Function tests, Coagulation. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', focus: 'IPE Practical & Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        mphw: {
+            title: 'MPhW (Multi-Purpose Health Worker)',
+            intro: 'This vocational course trains frontline community health workers, focusing on maternal/child health, health promotion, and health center management.',
+            years: {
+                '1st': {
+                    structure: ['Gen. Foundation Course', 'English', 'Community Health Nursing', 'Health Promotion', 'Primary Health Care Nursing', 'OJT'],
+                    syllabus: {
+                        'Community Health Nursing': 'Concept of Health, Community, Home Visiting, National Health Policies, Immunization, Sanitation.',
+                        'Health Promotion': 'Nutrition, Human Body & Hygiene, Mental Health.',
+                        'Primary Health Care Nursing': 'Intro to Nursing, Procedures (Vitals), First Aid.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Health concepts, Nutrition, Nursing basics. Practical: Vital signs, Bag technique. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: Health Ed, Immunity. Practical: Health education planning. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory OJT</b> at Sub-Centres and PHCs.' },
+                        { month: 'Jan', focus: 'Theory: Immunization, Pharmacology. Practical: Mock sessions. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', focus: 'IPE Practical & Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['Gen. Foundation Course', 'English', 'Midwifery', 'Child Health Nursing', 'Health Centre Management', 'OJT'],
+                    syllabus: {
+                        'Midwifery': 'Reproductive System, Antenatal/Intra-partum/Post-natal care, Newborn care, High-risk pregnancy, Family Welfare.',
+                        'Child Health Nursing': 'Growth & Development, IMNCI, School Health.',
+                        'Health Centre Management': 'Management concepts, Health admin structure, Role of Health Team, Stock/Cold Chain, National Programmes.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Pregnancy, Labor, Newborn care. Practical: Antenatal exam, Partograph. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: High-risk pregnancy, Child growth. Practical: Danger sign ID. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory OJT</b> at PHCs, CHCs, Maternity Wards.' },
+                        { month: 'Jan', focus: 'Theory: IMNCI, Mgmt. Practical: Stock registers. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', focus: 'IPE Practical & Theory Examinations.' }
+                    ]
+                }
+            }
+        },
+        at: {
+            title: 'A&T (Accounting & Taxation)',
+            intro: 'This vocational course produces professionals for accounting and finance, covering business principles, accounting, auditing, and the Indian tax system, including Tally & GST.',
+            years: {
+                '1st': {
+                    structure: ['Gen. Foundation Course', 'English', 'Business Organisation', 'Accountancy & Computers', 'Taxation I', 'OJT'],
+                    syllabus: {
+                        'Business Organisation': 'Business Concepts, Forms of Org, Banking, Insurance.',
+                        'Accountancy & Computers': 'Double Entry, Journal, Ledger, BRS, Final Accounts, MS Office.',
+                        'Taxation I': 'Intro to Tax, Income Tax Basics, Residential Status, Income from Salaries & House Property.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Business/Acct/Tax basics. Practical: PAN app, MS-DOS. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: Cooperatives, BRS, Salary Income. Practical: Bank forms, Form 16. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory OJT</b> with accounting firms/businesses.' },
+                        { month: 'Jan', focus: 'Theory: Final Accts, House Property Income. Practical: Final accts problems. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', 'focus': 'IPE Practical & Theory Examinations.' }
+                    ]
+                },
+                '2nd': {
+                    structure: ['Gen. Foundation Course', 'English', 'Auditing', 'Accountancy & Tally', 'Taxation II', 'OJT'],
+                    syllabus: {
+                        'Auditing': 'Intro, Types, Auditor duties, Vouching, Audit Report.',
+                        'Accountancy & Tally': 'Depreciation, NPO Accts, Partnership, Company Accts, Tally with GST.',
+                        'Taxation II': 'Income from Business/Profession, Capital Gains, Other Sources, Deductions (80C), GST.'
+                    },
+                    monthlyPlan: [
+                        { month: 'Jun-Sep', focus: 'Theory: Auditing, Depreciation, Business Income. Practical: Tally basics. (2 Unit Tests)' },
+                        { month: 'Oct', focus: 'Theory: Auditor Appointment, Capital Gains. Practical: Tally entries, CG computation. <b>(Quarterly Exams)</b>' },
+                        { month: 'Nov-Dec', focus: '<b>Mandatory OJT</b> with focus on auditing, Tally, and GST.' },
+                        { month: 'Jan', focus: 'Theory: Vouching, Audit Report, GST. Practical: Tally reports, GSTR generation. <b>(OJT Eval & Pre-Finals)</b>' },
+                        { month: 'Feb-Mar', 'focus': 'IPE Practical & Theory Examinations.' }
+                    ]
+                }
+            }
+        }
+    };
+
+    function createCourseHTML(courseKey) {
+        const course = courseData[courseKey];
+        const yearButtons = Object.keys(course.years).map((year, index) =>
+            `<button class="year-tab flex-grow text-center px-4 py-2 rounded-md font-semibold transition ${index === 0 ? 'active' : ''}" data-year="${year}">${year} Year</button>`
+        ).join('');
+
+        const yearContents = Object.entries(course.years).map(([year, data], index) => {
+            const structureList = data.structure.map(item => `<li class="p-2 bg-gray-50 rounded-md">${item}</li>`).join('');
+            
+            const syllabusAccordions = Object.entries(data.syllabus).map(([subject, topics]) => `
+                <div class="border rounded-lg overflow-hidden">
+                    <button class="accordion-toggle w-full p-4 text-left font-semibold bg-gray-100 hover:bg-gray-200 flex justify-between items-center">
+                        ${subject} Syllabus
+                        <span class="transform transition-transform duration-300">&#x25BC;</span>
+                    </button>
+                    <div class="accordion-content">
+                        <p class="p-4 text-gray-600">${topics}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            const monthlyPlanRows = data.monthlyPlan.map(plan => `
+                <tr class="border-b">
+                    <td class="p-3 font-medium text-gray-600">${plan.month}</td>
+                    <td class="p-3">${plan.focus}</td>
+                </tr>
+            `).join('');
+
+            return `
+                <div class="year-content ${index === 0 ? 'block' : 'hidden'}" data-year-content="${year}">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <section>
+                            <h3 class="text-xl font-bold mb-4 text-gray-800">Course Structure</h3>
+                            <ul class="space-y-2">${structureList}</ul>
+                        </section>
+                        <section>
+                            <h3 class="text-xl font-bold mb-4 text-gray-800">Month-by-Month Plan</h3>
+                            <div class="overflow-x-auto bg-white rounded-lg border">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-50">
+                                        <tr><th class="p-3">Month</th><th class="p-3">Focus Topics & Activities</th></tr>
+                                    </thead>
+                                    <tbody>${monthlyPlanRows}</tbody>
+                                </table>
+                            </div>
+                        </section>
+                    </div>
+                    <section class="mt-8">
+                        <h3 class="text-xl font-bold mb-4 text-gray-800">Detailed Syllabus</h3>
+                        <div class="space-y-3">${syllabusAccordions}</div>
+                    </section>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="bg-white p-6 rounded-xl shadow-lg space-y-6">
+                <header>
+                    <h2 class="text-3xl font-bold text-blue-900">${course.title}</h2>
+                    <p class="mt-2 text-gray-600">${course.intro}</p>
+                </header>
+                <div class="flex space-x-2 bg-blue-100 p-1 rounded-lg">${yearButtons}</div>
+                <div>${yearContents}</div>
+            </div>
+        `;
+    }
+
+    Object.keys(courseData).forEach(key => {
+        const targetDiv = document.getElementById(key);
+        if (targetDiv) {
+            targetDiv.innerHTML = createCourseHTML(key);
+        }
+    });
+
+    const mainContent = document.getElementById('main-content');
+    const navButtons = document.querySelectorAll('#course-navigation button');
+    
+    navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const targetId = button.dataset.target;
+
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(targetId).classList.add('active');
+        });
+    });
+
+    mainContent.addEventListener('click', (e) => {
+        if (e.target.matches('.year-tab')) {
+            const parent = e.target.closest('.flex');
+            parent.querySelectorAll('.year-tab').forEach(tab => tab.classList.remove('active'));
+            e.target.classList.add('active');
+
+            const year = e.target.dataset.year;
+            const contentContainer = e.target.closest('.bg-white');
+            contentContainer.querySelectorAll('.year-content').forEach(content => {
+                content.style.display = content.dataset.yearContent === year ? 'block' : 'none';
+            });
+        }
+
+        if (e.target.matches('.accordion-toggle')) {
+            const content = e.target.nextElementSibling;
+            const icon = e.target.querySelector('span');
+            if (content.style.maxHeight) {
+                content.style.maxHeight = null;
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                content.style.maxHeight = content.scrollHeight + "px";
+                icon.style.transform = 'rotate(180deg)';
+            }
+        }
+    });
+
+    const ctx = document.getElementById('gradingChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['A1 (91-100)', 'A2 (81-90)', 'B1 (71-80)', 'B2 (61-70)', 'C1 (51-60)', 'C2 (41-50)', 'D1 (35-40)'],
+            datasets: [{
+                label: 'Mark Range for Grade',
+                data: [100, 90, 80, 70, 60, 50, 40],
+                 backgroundColor: [
+                    '#1e40af', '#1d4ed8', '#2563eb', '#3b82f6',
+                    '#60a5fa', '#93c5fd', '#bfdbfe'
+                ],
+                borderColor: '#ffffff',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `Grade ${context.label.split(' ')[0]}: Marks up to ${context.raw}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Maximum Marks in Range (%)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Grade (Mark Range)'
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+</body>
+</html>
